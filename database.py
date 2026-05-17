@@ -123,6 +123,72 @@ def ensure_users_password_column() -> None:
         conn.execute(text(ddl))
 
 
+def ensure_slider_items_schema() -> None:
+    """Alinea slider_items con el esquema actual (nombre de tabla y columnas)."""
+    from sqlalchemy import inspect, text
+
+    insp = inspect(engine)
+    tables = set(insp.get_table_names())
+
+    dialect = engine.dialect.name
+
+    with engine.begin() as conn:
+        if "slider_items" not in tables and "sliders_items" in tables:
+            if dialect == "mysql":
+                conn.execute(text("RENAME TABLE sliders_items TO slider_items"))
+            else:
+                conn.execute(text("ALTER TABLE sliders_items RENAME TO slider_items"))
+
+    insp = inspect(engine)
+    if "slider_items" not in insp.get_table_names():
+        return
+
+    columns = {col["name"] for col in insp.get_columns("slider_items")}
+
+    with engine.begin() as conn:
+        if "slideer_id" in columns and "slider_id" not in columns:
+            if dialect == "mysql":
+                conn.execute(
+                    text(
+                        "ALTER TABLE slider_items "
+                        "CHANGE COLUMN slideer_id slider_id INT NOT NULL"
+                    )
+                )
+            else:
+                conn.execute(
+                    text(
+                        "ALTER TABLE slider_items "
+                        "RENAME COLUMN slideer_id TO slider_id"
+                    )
+                )
+            columns.discard("slideer_id")
+            columns.add("slider_id")
+
+        if "added_date" not in columns:
+            ddl = (
+                "ALTER TABLE slider_items ADD COLUMN added_date DATETIME NULL"
+                if dialect == "mysql"
+                else "ALTER TABLE slider_items ADD COLUMN added_date DATETIME"
+            )
+            conn.execute(text(ddl))
+
+        if "updated_date" not in columns:
+            ddl = (
+                "ALTER TABLE slider_items ADD COLUMN updated_date DATETIME NULL"
+                if dialect == "mysql"
+                else "ALTER TABLE slider_items ADD COLUMN updated_date DATETIME"
+            )
+            conn.execute(text(ddl))
+
+        if dialect == "mysql":
+            conn.execute(
+                text(
+                    "ALTER TABLE slider_items "
+                    "MODIFY COLUMN id INT NOT NULL AUTO_INCREMENT"
+                )
+            )
+
+
 def ensure_sliders_active_column() -> None:
     """Añade sliders.active en bases ya creadas."""
     from sqlalchemy import inspect, text

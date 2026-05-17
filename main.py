@@ -11,6 +11,7 @@ from database import (
     engine,
     ensure_service_gallery_title_column,
     ensure_services_subtitle_column,
+    ensure_slider_items_schema,
     ensure_sliders_active_column,
     ensure_users_password_column,
     ensure_users_table,
@@ -69,6 +70,7 @@ Base.metadata.create_all(bind=engine)
 ensure_service_gallery_title_column()
 ensure_services_subtitle_column()
 ensure_sliders_active_column()
+ensure_slider_items_schema()
 ensure_users_table()
 ensure_users_password_column()
 ensure_uploads_root()

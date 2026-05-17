@@ -23,6 +23,20 @@ def index(
     return SliderItemClass(db).get_all(skip=skip, limit=limit)
 
 
+@router.get("/slider/{slider_id}", response_model=list[SliderItemSchema])
+def index_by_slider(
+    slider_id: int,
+    skip: int = Query(default=0, ge=0),
+    limit: int = Query(default=100, ge=1, le=500),
+    db: Session = Depends(get_db),
+) -> list[SliderItemSchema]:
+    return SliderItemClass(db).get_by_slider_id(
+        slider_id,
+        skip=skip,
+        limit=limit,
+    )
+
+
 @router.get("/{slider_item_id}", response_model=SliderItemSchema)
 def show(
     slider_item_id: int,
