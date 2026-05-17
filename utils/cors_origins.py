@@ -8,17 +8,12 @@ _DEFAULT_ORIGINS = (
     "http://localhost:5174",
     "http://127.0.0.1:4173",
     "http://localhost:4173",
-    # Firebase Hosting — sitio público
+    # Firebase Hosting
     "https://tintwrap-722e4.web.app",
     "https://tintwrap-722e4.firebaseapp.com",
-    # Sitio público — https://tint-wrap.com/
+    # Dominio público
     "https://tint-wrap.com",
     "https://www.tint-wrap.com",
-    # Panel admin (producción)
-    "https://admin.tint-wrap.com",
-    "https://www.admin.tint-wrap.com",
-    "https://admin-tint-wrap.web.app",
-    "https://admin-tint-wrap.firebaseapp.com",
 )
 
 
@@ -32,10 +27,17 @@ def get_cors_origins() -> list[str]:
 
     seen: set[str] = set()
     result: list[str] = []
-    for raw in (*_DEFAULT_ORIGINS, *from_env):
-        origin = raw.strip().rstrip("/")
-        if not origin or origin in seen:
-            continue
-        seen.add(origin)
-        result.append(origin)
+    for origin in (*_DEFAULT_ORIGINS, *from_env):
+        if origin not in seen:
+            seen.add(origin)
+            result.append(origin)
     return result
+
+
+def get_cors_origin_regex() -> str:
+    """Firebase Hosting, dominio propio y localhost."""
+    return (
+        r"^https://([a-z0-9-]+\.)*(web\.app|firebaseapp\.com)$"
+        r"|^https://(www\.)?tint-wrap\.com$"
+        r"|^http://(localhost|127\.0\.0\.1)(:\d+)?$"
+    )
