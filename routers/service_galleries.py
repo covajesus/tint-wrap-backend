@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 
 from classes.service_galleries import ServiceGalleryClass
 from database import get_db
+from dependencies.auth import get_current_user
 from schemas.service_galleries import (
     CreateServiceGallery,
     ServiceGallerySchema,
@@ -56,6 +57,7 @@ def show(
     "/",
     response_model=ServiceGallerySchema,
     status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(get_current_user)],
 )
 def store(
     gallery: CreateServiceGallery,
@@ -64,8 +66,16 @@ def store(
     return ServiceGalleryClass(db).store(gallery)
 
 
-@router.put("/{gallery_id}", response_model=ServiceGallerySchema)
-@router.patch("/{gallery_id}", response_model=ServiceGallerySchema)
+@router.put(
+    "/{gallery_id}",
+    response_model=ServiceGallerySchema,
+    dependencies=[Depends(get_current_user)],
+)
+@router.patch(
+    "/{gallery_id}",
+    response_model=ServiceGallerySchema,
+    dependencies=[Depends(get_current_user)],
+)
 def update(
     gallery_id: int,
     gallery: UpdateServiceGallery,
@@ -82,7 +92,11 @@ def update(
     return updated_gallery
 
 
-@router.delete("/{gallery_id}", status_code=status.HTTP_200_OK)
+@router.delete(
+    "/{gallery_id}",
+    status_code=status.HTTP_200_OK,
+    dependencies=[Depends(get_current_user)],
+)
 def destroy(
     gallery_id: int,
     db: Session = Depends(get_db),

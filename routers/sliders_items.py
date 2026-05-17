@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 
 from classes.sliders_items import SliderItemClass
 from database import get_db
+from dependencies.auth import get_current_user
 from schemas.sliders_items import (
     CreateSliderItem,
     SliderItemSchema,
@@ -42,6 +43,7 @@ def show(
     "/",
     response_model=SliderItemSchema,
     status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(get_current_user)],
 )
 def store(
     slider_item: CreateSliderItem,
@@ -50,8 +52,16 @@ def store(
     return SliderItemClass(db).store(slider_item)
 
 
-@router.put("/{slider_item_id}", response_model=SliderItemSchema)
-@router.patch("/{slider_item_id}", response_model=SliderItemSchema)
+@router.put(
+    "/{slider_item_id}",
+    response_model=SliderItemSchema,
+    dependencies=[Depends(get_current_user)],
+)
+@router.patch(
+    "/{slider_item_id}",
+    response_model=SliderItemSchema,
+    dependencies=[Depends(get_current_user)],
+)
 def update(
     slider_item_id: int,
     slider_item: UpdateSliderItem,
@@ -68,7 +78,11 @@ def update(
     return updated_slider_item
 
 
-@router.delete("/{slider_item_id}", status_code=status.HTTP_200_OK)
+@router.delete(
+    "/{slider_item_id}",
+    status_code=status.HTTP_200_OK,
+    dependencies=[Depends(get_current_user)],
+)
 def destroy(
     slider_item_id: int,
     db: Session = Depends(get_db),

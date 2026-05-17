@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 
 from classes.services import ServiceClass
 from database import get_db
+from dependencies.auth import get_current_user
 from schemas.services import CreateService, ServiceSchema, UpdateService
 
 
@@ -35,6 +36,7 @@ def show(service_id: int, db: Session = Depends(get_db)) -> ServiceSchema:
     "/",
     response_model=ServiceSchema,
     status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(get_current_user)],
 )
 def store(
     service: CreateService,
@@ -43,8 +45,16 @@ def store(
     return ServiceClass(db).store(service)
 
 
-@router.put("/{service_id}", response_model=ServiceSchema)
-@router.patch("/{service_id}", response_model=ServiceSchema)
+@router.put(
+    "/{service_id}",
+    response_model=ServiceSchema,
+    dependencies=[Depends(get_current_user)],
+)
+@router.patch(
+    "/{service_id}",
+    response_model=ServiceSchema,
+    dependencies=[Depends(get_current_user)],
+)
 def update(
     service_id: int,
     service: UpdateService,
@@ -61,7 +71,11 @@ def update(
     return updated_service
 
 
-@router.delete("/{service_id}", status_code=status.HTTP_200_OK)
+@router.delete(
+    "/{service_id}",
+    status_code=status.HTTP_200_OK,
+    dependencies=[Depends(get_current_user)],
+)
 def destroy(service_id: int, db: Session = Depends(get_db)) -> dict[str, str]:
     deleted = ServiceClass(db).delete(service_id)
 

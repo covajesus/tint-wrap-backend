@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 
 from classes.sliders import SliderClass
 from database import get_db
+from dependencies.auth import get_current_user
 from schemas.sliders import CreateSlider, SliderSchema, UpdateSlider
 
 
@@ -46,6 +47,7 @@ def show(slider_id: int, db: Session = Depends(get_db)) -> SliderSchema:
     "/",
     response_model=SliderSchema,
     status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(get_current_user)],
 )
 def store(
     slider: CreateSlider,
@@ -54,8 +56,16 @@ def store(
     return SliderClass(db).store(slider)
 
 
-@router.put("/{slider_id}", response_model=SliderSchema)
-@router.patch("/{slider_id}", response_model=SliderSchema)
+@router.put(
+    "/{slider_id}",
+    response_model=SliderSchema,
+    dependencies=[Depends(get_current_user)],
+)
+@router.patch(
+    "/{slider_id}",
+    response_model=SliderSchema,
+    dependencies=[Depends(get_current_user)],
+)
 def update(
     slider_id: int,
     slider: UpdateSlider,
@@ -72,7 +82,11 @@ def update(
     return updated_slider
 
 
-@router.delete("/{slider_id}", status_code=status.HTTP_200_OK)
+@router.delete(
+    "/{slider_id}",
+    status_code=status.HTTP_200_OK,
+    dependencies=[Depends(get_current_user)],
+)
 def destroy(slider_id: int, db: Session = Depends(get_db)) -> dict[str, str]:
     deleted = SliderClass(db).delete(slider_id)
 

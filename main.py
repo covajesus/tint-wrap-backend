@@ -1,4 +1,4 @@
-from fastapi import Depends, FastAPI
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
@@ -12,7 +12,6 @@ from database import (
     ensure_users_password_column,
     ensure_users_table,
 )
-from dependencies.auth import get_current_user
 from models import users  # noqa: F401 — registra el modelo en metadata
 from routers import (
     auth,
@@ -58,15 +57,13 @@ try:
 finally:
     db.close()
 
-protected = [Depends(get_current_user)]
-
 app.include_router(auth.router)
-app.include_router(blogs.router, dependencies=protected)
-app.include_router(configurations.router, dependencies=protected)
-app.include_router(service_galleries.router, dependencies=protected)
-app.include_router(services.router, dependencies=protected)
-app.include_router(sliders_items.router, dependencies=protected)
-app.include_router(sliders.router, dependencies=protected)
+app.include_router(blogs.router)
+app.include_router(configurations.router)
+app.include_router(service_galleries.router)
+app.include_router(services.router)
+app.include_router(sliders_items.router)
+app.include_router(sliders.router)
 
 app.mount(
     "/api/uploads",

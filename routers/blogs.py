@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 
 from classes.blogs import BlogClass
 from database import get_db
+from dependencies.auth import get_current_user
 from schemas.blogs import BlogSchema, CreateBlog, UpdateBlog
 
 
@@ -35,6 +36,7 @@ def show(blog_id: int, db: Session = Depends(get_db)) -> BlogSchema:
     "/",
     response_model=BlogSchema,
     status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(get_current_user)],
 )
 def store(
     blog: CreateBlog,
@@ -43,8 +45,16 @@ def store(
     return BlogClass(db).store(blog)
 
 
-@router.put("/{blog_id}", response_model=BlogSchema)
-@router.patch("/{blog_id}", response_model=BlogSchema)
+@router.put(
+    "/{blog_id}",
+    response_model=BlogSchema,
+    dependencies=[Depends(get_current_user)],
+)
+@router.patch(
+    "/{blog_id}",
+    response_model=BlogSchema,
+    dependencies=[Depends(get_current_user)],
+)
 def update(
     blog_id: int,
     blog: UpdateBlog,
@@ -61,7 +71,11 @@ def update(
     return updated_blog
 
 
-@router.delete("/{blog_id}", status_code=status.HTTP_200_OK)
+@router.delete(
+    "/{blog_id}",
+    status_code=status.HTTP_200_OK,
+    dependencies=[Depends(get_current_user)],
+)
 def destroy(blog_id: int, db: Session = Depends(get_db)) -> dict[str, str]:
     deleted = BlogClass(db).delete(blog_id)
 
