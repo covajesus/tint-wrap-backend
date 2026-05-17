@@ -27,7 +27,6 @@ UPLOAD_SUBDIRS = (
     "service-galleries",
     "blogs",
     "sliders",
-    "sliders-items",
 )
 
 

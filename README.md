@@ -1,6 +1,6 @@
 # TintWrap Backend
 
-API base en FastAPI con CRUD para `blogs`, `sliders`, `sliders_items`, `services` y `service_galleries`.
+API base en FastAPI con CRUD para `blogs`, `sliders`, `services` y `service_galleries`.
 
 ## Instalar
 
@@ -58,9 +58,3 @@ uvicorn main:app --reload
 - `PUT /api/service-galleries/{gallery_id}`
 - `PATCH /api/service-galleries/{gallery_id}`
 - `DELETE /api/service-galleries/{gallery_id}`
-- `GET /api/sliders-items/`
-- `GET /api/sliders-items/{slider_item_id}`
-- `POST /api/sliders-items/`
-- `PUT /api/sliders-items/{slider_item_id}`
-- `PATCH /api/sliders-items/{slider_item_id}`
-- `DELETE /api/sliders-items/{slider_item_id}`
