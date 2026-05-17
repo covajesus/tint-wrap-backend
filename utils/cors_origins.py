@@ -16,8 +16,6 @@ _DEFAULT_ORIGINS = (
     "https://www.tint-wrap.com",
     "https://admin.tint-wrap.com",
     "https://www.admin.tint-wrap.com",
-    "https://admin.tint-wrap.com",
-    "https://www.admin.tint-wrap.com",
 )
 
 
@@ -43,5 +41,6 @@ def get_cors_origin_regex() -> str:
     return (
         r"^https://([a-z0-9-]+\.)*(web\.app|firebaseapp\.com)$"
         r"|^https://(www\.)?tint-wrap\.com$"
+        r"|^https://(www\.)?admin\.tint-wrap\.com$"
         r"|^http://(localhost|127\.0\.0\.1)(:\d+)?$"
     )

@@ -7,12 +7,17 @@ from fastapi.staticfiles import StaticFiles
 
 from database import (
     Base,
+    SessionLocal,
     engine,
     ensure_service_gallery_title_column,
     ensure_services_subtitle_column,
     ensure_sliders_active_column,
+    ensure_users_password_column,
+    ensure_users_table,
 )
+from models import users  # noqa: F401 — registra el modelo en metadata
 from routers import (
+    auth,
     blogs,
     configurations,
     service_galleries,
@@ -22,6 +27,7 @@ from routers import (
     tiktok,
     youtube,
 )
+from utils.seed_admin import seed_default_admin
 from utils.cors_origins import get_cors_origin_regex, get_cors_origins
 from utils.media_storage import UPLOADS_ROOT, ensure_uploads_root
 from utils.tiktok_sync_scheduler import run_tiktok_sync_scheduler
@@ -63,8 +69,17 @@ Base.metadata.create_all(bind=engine)
 ensure_service_gallery_title_column()
 ensure_services_subtitle_column()
 ensure_sliders_active_column()
+ensure_users_table()
+ensure_users_password_column()
 ensure_uploads_root()
 
+db = SessionLocal()
+try:
+    seed_default_admin(db)
+finally:
+    db.close()
+
+app.include_router(auth.router)
 app.include_router(blogs.router)
 app.include_router(configurations.router)
 app.include_router(service_galleries.router)
