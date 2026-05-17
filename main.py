@@ -1,8 +1,10 @@
 import asyncio
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.exceptions import ResponseValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from database import (
@@ -63,7 +65,23 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
+
+
+@app.exception_handler(ResponseValidationError)
+async def response_validation_exception_handler(
+    request: Request,
+    exc: ResponseValidationError,
+) -> JSONResponse:
+    return JSONResponse(
+        status_code=500,
+        content={
+            "detail": "Error al serializar la respuesta. Revisa fechas en la base de datos.",
+            "errors": exc.errors(),
+        },
+    )
+
 
 Base.metadata.create_all(bind=engine)
 ensure_service_gallery_title_column()
