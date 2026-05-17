@@ -23,7 +23,7 @@ def index(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=(
                 f"Error al leer sliders: {exc}. "
-                "Reinicia el backend (python -m uvicorn main:app --port 8000) "
+                "Reinicia el backend (python -m uvicorn main:app --port 8030) "
                 "tras actualizar el código."
             ),
         ) from exc

@@ -28,8 +28,8 @@ uvicorn main:app --reload
 
 ## URLs
 
-- Base API: `http://127.0.0.1:8000/api/`
-- Documentacion: `http://127.0.0.1:8000/api/docs`
+- Base API: `http://127.0.0.1:8030/api/`
+- Documentacion: `http://127.0.0.1:8030/api/docs`
 
 ## Endpoints
 
