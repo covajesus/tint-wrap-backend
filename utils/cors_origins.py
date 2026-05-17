@@ -14,6 +14,10 @@ _DEFAULT_ORIGINS = (
     # Dominio público
     "https://tint-wrap.com",
     "https://www.tint-wrap.com",
+    "https://admin.tint-wrap.com",
+    "https://www.admin.tint-wrap.com",
+    "https://admin.tint-wrap.com",
+    "https://www.admin.tint-wrap.com",
 )
 
 
