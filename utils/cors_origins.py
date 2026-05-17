@@ -11,7 +11,7 @@ _DEFAULT_ORIGINS = (
     # Firebase Hosting — sitio público
     "https://tintwrap-722e4.web.app",
     "https://tintwrap-722e4.firebaseapp.com",
-    # Dominio público
+    # Sitio público — https://tint-wrap.com/
     "https://tint-wrap.com",
     "https://www.tint-wrap.com",
     # Panel admin (producción)
@@ -32,8 +32,10 @@ def get_cors_origins() -> list[str]:
 
     seen: set[str] = set()
     result: list[str] = []
-    for origin in (*_DEFAULT_ORIGINS, *from_env):
-        if origin not in seen:
-            seen.add(origin)
-            result.append(origin)
+    for raw in (*_DEFAULT_ORIGINS, *from_env):
+        origin = raw.strip().rstrip("/")
+        if not origin or origin in seen:
+            continue
+        seen.add(origin)
+        result.append(origin)
     return result
