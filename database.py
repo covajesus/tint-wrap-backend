@@ -1,19 +1,14 @@
 import os
 from collections.abc import Generator
-from pathlib import Path
 
-from dotenv import load_dotenv
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, declarative_base, sessionmaker
 
-_env_path = Path(__file__).resolve().parent / ".env"
-load_dotenv(_env_path)
 
-SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL")
-if not SQLALCHEMY_DATABASE_URL:
-    raise RuntimeError(
-        "DATABASE_URL no está definida. Crea un archivo .env en la carpeta backend."
-    )
+SQLALCHEMY_DATABASE_URL = os.getenv(
+    "DATABASE_URL",
+    "mysql+pymysql://root@localhost/tintwrap",
+)
 
 connect_args = (
     {"check_same_thread": False}
@@ -74,6 +69,51 @@ def ensure_services_subtitle_column() -> None:
         ddl = "ALTER TABLE services ADD COLUMN subtitle VARCHAR(255)"
     else:
         ddl = "ALTER TABLE services ADD COLUMN subtitle VARCHAR(255)"
+
+    with engine.begin() as conn:
+        conn.execute(text(ddl))
+
+
+def ensure_users_table() -> None:
+    """Renombra admin_users → users en bases creadas antes del cambio de nombre."""
+    from sqlalchemy import inspect, text
+
+    insp = inspect(engine)
+    tables = set(insp.get_table_names())
+    if "users" in tables:
+        return
+    if "admin_users" not in tables:
+        return
+
+    dialect = engine.dialect.name
+    with engine.begin() as conn:
+        if dialect == "mysql":
+            conn.execute(text("RENAME TABLE admin_users TO users"))
+        elif dialect == "sqlite":
+            conn.execute(text("ALTER TABLE admin_users RENAME TO users"))
+        else:
+            conn.execute(text("ALTER TABLE admin_users RENAME TO users"))
+
+
+def ensure_users_password_column() -> None:
+    """Renombra users.password_hash → password en bases ya creadas."""
+    from sqlalchemy import inspect, text
+
+    insp = inspect(engine)
+    if "users" not in insp.get_table_names():
+        return
+
+    columns = {col["name"] for col in insp.get_columns("users")}
+    if "password" in columns:
+        return
+    if "password_hash" not in columns:
+        return
+
+    dialect = engine.dialect.name
+    if dialect == "mysql":
+        ddl = "ALTER TABLE users CHANGE COLUMN password_hash password VARCHAR(255) NOT NULL"
+    else:
+        ddl = "ALTER TABLE users RENAME COLUMN password_hash TO password"
 
     with engine.begin() as conn:
         conn.execute(text(ddl))

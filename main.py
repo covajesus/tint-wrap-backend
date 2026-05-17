@@ -22,6 +22,7 @@ from routers import (
     tiktok,
     youtube,
 )
+from utils.cors_origins import get_cors_origins
 from utils.media_storage import UPLOADS_ROOT, ensure_uploads_root
 from utils.tiktok_sync_scheduler import run_tiktok_sync_scheduler
 from utils.youtube_sync_scheduler import run_youtube_sync_scheduler
@@ -51,12 +52,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://127.0.0.1:5173",
-        "http://localhost:5173",
-        "http://127.0.0.1:5174",
-        "http://localhost:5174",
-    ],
+    allow_origins=get_cors_origins(),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -95,9 +91,6 @@ def root() -> dict[str, str]:
 
 
 if __name__ == "__main__":
-    import os
-
     import uvicorn
 
-    port = int(os.getenv("PORT", "8030"))
-    uvicorn.run("main:app", host="127.0.0.1", port=port, reload=True)
+    uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)
