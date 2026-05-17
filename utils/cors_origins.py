@@ -8,12 +8,17 @@ _DEFAULT_ORIGINS = (
     "http://localhost:5174",
     "http://127.0.0.1:4173",
     "http://localhost:4173",
-    # Firebase Hosting
+    # Firebase Hosting — sitio público
     "https://tintwrap-722e4.web.app",
     "https://tintwrap-722e4.firebaseapp.com",
     # Dominio público
     "https://tint-wrap.com",
     "https://www.tint-wrap.com",
+    # Panel admin (producción)
+    "https://admin.tint-wrap.com",
+    "https://www.admin.tint-wrap.com",
+    "https://admin-tint-wrap.web.app",
+    "https://admin-tint-wrap.firebaseapp.com",
 )
 
 
