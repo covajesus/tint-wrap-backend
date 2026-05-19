@@ -48,6 +48,12 @@ def ensure_slider_upload_dir(slider_id: int) -> Path:
     return folder
 
 
+def ensure_blog_upload_dir(blog_id: int) -> Path:
+    folder = UPLOADS_ROOT / "blogs" / str(blog_id)
+    folder.mkdir(parents=True, exist_ok=True)
+    return folder
+
+
 def _public_url(relative_posix: str) -> str:
     return f"{PUBLIC_PREFIX}/{relative_posix.replace(chr(92), '/')}"
 
@@ -171,6 +177,17 @@ def persist_slider_media(
     return _persist_uploaded_file(value, folder=folder, previous=previous)
 
 
+def persist_blog_media(
+    value: str | None,
+    *,
+    blog_id: int,
+    previous: str | None = None,
+) -> str | None:
+    ensure_blog_upload_dir(blog_id)
+    folder = f"blogs/{blog_id}"
+    return _persist_uploaded_file(value, folder=folder, previous=previous)
+
+
 def delete_service_upload_folder(service_id: int) -> None:
     folder = UPLOADS_ROOT / "services" / str(service_id)
     if folder.is_dir():
@@ -179,5 +196,11 @@ def delete_service_upload_folder(service_id: int) -> None:
 
 def delete_slider_upload_folder(slider_id: int) -> None:
     folder = UPLOADS_ROOT / "sliders" / str(slider_id)
+    if folder.is_dir():
+        shutil.rmtree(folder, ignore_errors=True)
+
+
+def delete_blog_upload_folder(blog_id: int) -> None:
+    folder = UPLOADS_ROOT / "blogs" / str(blog_id)
     if folder.is_dir():
         shutil.rmtree(folder, ignore_errors=True)

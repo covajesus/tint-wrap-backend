@@ -1,18 +1,14 @@
 import os
 from collections.abc import Generator
-from pathlib import Path
 
-from dotenv import load_dotenv
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, declarative_base, sessionmaker
 
-load_dotenv(Path(__file__).resolve().parent / ".env")
 
-SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL")
-if not SQLALCHEMY_DATABASE_URL:
-    raise RuntimeError(
-        "DATABASE_URL no está definida. Añádela en backend/.env"
-    )
+SQLALCHEMY_DATABASE_URL = os.getenv(
+    "DATABASE_URL",
+    "mysql+pymysql://root@localhost/tintwrap",
+)
 
 connect_args = (
     {"check_same_thread": False}
