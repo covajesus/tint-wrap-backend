@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from sqlalchemy.orm import Session
 
 from models.blogs import Blog
@@ -22,8 +24,14 @@ class BlogClass:
         return self.db.query(Blog).filter(Blog.id == blog_id).first()
 
     def store(self, blog: CreateBlog) -> Blog:
+        now = datetime.utcnow()
         data = blog.model_dump(exclude_none=True)
         image = data.pop("image", None)
+
+        if "added_date" not in data:
+            data["added_date"] = now
+        if "updated_date" not in data:
+            data["updated_date"] = now
 
         try:
             db_blog = Blog(**data)
@@ -58,6 +66,8 @@ class BlogClass:
                 blog_id=blog_id,
                 previous=db_blog.image,
             )
+
+        db_blog.updated_date = datetime.utcnow()
 
         try:
             self.db.commit()

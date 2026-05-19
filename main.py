@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
@@ -6,12 +6,14 @@ from database import (
     Base,
     SessionLocal,
     engine,
+    ensure_blogs_date_columns,
     ensure_service_gallery_title_column,
     ensure_services_subtitle_column,
     ensure_sliders_active_column,
     ensure_users_password_column,
     ensure_users_table,
 )
+from dependencies.auth import get_current_user
 from models import users  # noqa: F401 — registra el modelo en metadata
 from routers import (
     auth,
@@ -20,13 +22,11 @@ from routers import (
     service_galleries,
     services,
     sliders,
-    tiktok,
-    youtube,
 )
-from utils.cors_middleware import ExplicitCorsMiddleware
-from utils.cors_origins import get_cors_origin_regex, get_cors_origins
+from utils.cors_origins import get_cors_origins
 from utils.media_storage import UPLOADS_ROOT, ensure_uploads_root
 from utils.seed_admin import seed_default_admin
+
 
 app = FastAPI(
     title="TintWrap API",
@@ -38,18 +38,16 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=get_cors_origins(),
-    allow_origin_regex=get_cors_origin_regex(),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
     expose_headers=["*"],
 )
-# Responde OPTIONS (preflight) aunque falle algo más abajo en la pila.
-app.add_middleware(ExplicitCorsMiddleware)
 
 Base.metadata.create_all(bind=engine)
 ensure_service_gallery_title_column()
 ensure_services_subtitle_column()
+ensure_blogs_date_columns()
 ensure_sliders_active_column()
 ensure_users_table()
 ensure_users_password_column()
@@ -61,14 +59,14 @@ try:
 finally:
     db.close()
 
+protected = [Depends(get_current_user)]
+
 app.include_router(auth.router)
-app.include_router(blogs.router)
-app.include_router(configurations.router)
-app.include_router(service_galleries.router)
-app.include_router(services.router)
-app.include_router(sliders.router)
-app.include_router(tiktok.router)
-app.include_router(youtube.router)
+app.include_router(blogs.router, dependencies=protected)
+app.include_router(configurations.router, dependencies=protected)
+app.include_router(service_galleries.router, dependencies=protected)
+app.include_router(services.router, dependencies=protected)
+app.include_router(sliders.router, dependencies=protected)
 
 app.mount(
     "/api/uploads",
@@ -88,9 +86,6 @@ def root() -> dict[str, str]:
 
 
 if __name__ == "__main__":
-    import os
-
     import uvicorn
 
-    port = int(os.getenv("PORT", "8000"))
-    uvicorn.run("main:app", host="127.0.0.1", port=port, reload=True)
+    uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)

@@ -4,6 +4,8 @@ from sqlalchemy.orm import Session
 
 from models.configurations import Configuration
 from schemas.configurations import ConfigurationSchema, UpdateConfiguration
+from utils.tiktok_feed import invalidate_tiktok_cache
+from utils.youtube_feed import invalidate_youtube_cache
 
 DEFAULT_CONFIGURATION_ID = 1
 
@@ -68,5 +70,10 @@ class ConfigurationClass:
 
         self.db.commit()
         self.db.refresh(row)
+
+        if "tiktok_url" in data:
+            invalidate_tiktok_cache()
+        if "youtube_url" in data:
+            invalidate_youtube_cache()
 
         return ConfigurationSchema.model_validate(row)

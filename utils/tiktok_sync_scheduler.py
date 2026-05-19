@@ -15,7 +15,7 @@ _STARTUP_DELAY_SECONDS = 8
 
 
 async def run_tiktok_sync_scheduler() -> None:
-    """Sincroniza @tintwrap en segundo plano sin depender de visitas."""
+    """Sincroniza el perfil TikTok de configuración en segundo plano."""
     await asyncio.sleep(_STARTUP_DELAY_SECONDS)
 
     while True:

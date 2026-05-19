@@ -10,11 +10,10 @@ from pathlib import Path
 from urllib.request import Request, urlopen
 
 from utils.media_storage import UPLOADS_ROOT, ensure_uploads_root
+from utils.tiktok_profile import TikTokProfile, get_configured_tiktok_profile
 
 logger = logging.getLogger(__name__)
 
-TIKTOK_PROFILE_URL = "https://www.tiktok.com/@tintwrap"
-TIKTOK_USERNAME = "tintwrap"
 DEFAULT_LIMIT = 6
 CACHE_TTL = timedelta(hours=1)
 AUTO_SYNC_INTERVAL_HOURS = 6
@@ -37,8 +36,18 @@ class TikTokVideo:
 
 _cache_at: datetime | None = None
 _cache_videos: list[TikTokVideo] = []
+_cache_profile: TikTokProfile | None = None
 _stream_cache: dict[str, tuple[datetime, str]] = {}
 STREAM_CACHE_TTL = timedelta(minutes=30)
+
+
+def invalidate_tiktok_cache() -> None:
+    """Llamar cuando cambia tiktok_url en configuración."""
+    global _cache_at, _cache_videos, _cache_profile, _stream_cache
+    _cache_at = None
+    _cache_videos = []
+    _cache_profile = None
+    _stream_cache.clear()
 
 
 def _ytdlp_executable() -> str:
@@ -181,7 +190,7 @@ def _download_video_file(video_id: str, webpage_url: str) -> str | None:
     return None
 
 
-def _entry_to_video(entry: dict) -> TikTokVideo | None:
+def _entry_to_video(entry: dict, *, username: str) -> TikTokVideo | None:
     video_id = str(entry.get("id") or "").strip()
     if not video_id:
         return None
@@ -190,7 +199,7 @@ def _entry_to_video(entry: dict) -> TikTokVideo | None:
     caption = str(entry.get("description") or title or "").strip()
     webpage = str(entry.get("webpage_url") or "").strip()
     if not webpage:
-        webpage = f"https://www.tiktok.com/@{TIKTOK_USERNAME}/video/{video_id}"
+        webpage = f"https://www.tiktok.com/@{username}/video/{video_id}"
 
     remote_thumb = _pick_thumbnail_url(entry)
     thumbnail_path = _download_thumbnail(video_id, remote_thumb)
@@ -209,33 +218,63 @@ def _entry_to_video(entry: dict) -> TikTokVideo | None:
     )
 
 
+_CONFIG_MSG = (
+    "Configura la URL de TikTok en Administración → Configuración "
+    "(ej. https://www.tiktok.com/@tu_usuario)."
+)
+
+
 def fetch_latest_videos(limit: int = DEFAULT_LIMIT, *, force: bool = False) -> list[TikTokVideo]:
-    global _cache_at, _cache_videos
+    global _cache_at, _cache_videos, _cache_profile
+
+    profile = get_configured_tiktok_profile()
+    if profile is None:
+        raise RuntimeError(_CONFIG_MSG)
 
     now = datetime.now(timezone.utc)
     if (
         not force
         and _cache_at is not None
         and _cache_videos
+        and _cache_profile is not None
+        and _cache_profile.username == profile.username
         and now - _cache_at < CACHE_TTL
     ):
         return _cache_videos[:limit]
 
-    entries = _run_ytdlp_json(TIKTOK_PROFILE_URL, limit)
+    try:
+        entries = _run_ytdlp_json(profile.profile_url, limit)
+    except RuntimeError as exc:
+        if _cache_videos and _cache_profile and _cache_profile.username == profile.username:
+            logger.warning("TikTok: usando caché tras fallo de yt-dlp: %s", exc)
+            return _cache_videos[:limit]
+        raise RuntimeError(
+            "No se pudieron cargar los vídeos de TikTok. "
+            "Comprueba la URL del perfil en Configuración y actualiza yt-dlp en el servidor."
+        ) from exc
+
     videos: list[TikTokVideo] = []
     for entry in entries:
-        video = _entry_to_video(entry)
+        video = _entry_to_video(entry, username=profile.username)
         if video is not None:
             videos.append(video)
 
     if not videos:
-        raise RuntimeError("No se encontraron videos en el perfil de TikTok.")
+        if _cache_videos and _cache_profile and _cache_profile.username == profile.username:
+            return _cache_videos[:limit]
+        raise RuntimeError("No se encontraron vídeos en el perfil de TikTok.")
 
     _prune_stale_media({video.id for video in videos})
 
     _cache_at = now
     _cache_videos = videos
+    _cache_profile = profile
     return videos[:limit]
+
+
+def get_tiktok_profile_url() -> str:
+    profile = get_configured_tiktok_profile()
+    return profile.profile_url if profile is not None else ""
 
 
 def _prune_stale_media(active_ids: set[str]) -> None:
@@ -265,6 +304,10 @@ def resolve_stream_url(video_id: str) -> str:
     if not video_id.isdigit():
         raise ValueError("ID de video inválido.")
 
+    profile = get_configured_tiktok_profile()
+    if profile is None:
+        raise RuntimeError(_CONFIG_MSG)
+
     now = datetime.now(timezone.utc)
     cached = _stream_cache.get(video_id)
     if cached and now - cached[0] < STREAM_CACHE_TTL:
@@ -275,7 +318,7 @@ def resolve_stream_url(video_id: str) -> str:
             _stream_cache[video_id] = (now, video.stream_url)
             return video.stream_url
 
-    url = f"https://www.tiktok.com/@{TIKTOK_USERNAME}/video/{video_id}"
+    url = f"https://www.tiktok.com/@{profile.username}/video/{video_id}"
     cmd = [
         _ytdlp_executable(),
         "-g",

@@ -1,18 +1,14 @@
 import os
 from collections.abc import Generator
-from pathlib import Path
 
-from dotenv import load_dotenv
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, declarative_base, sessionmaker
 
-load_dotenv(Path(__file__).resolve().parent / ".env")
 
-SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL")
-if not SQLALCHEMY_DATABASE_URL:
-    raise RuntimeError(
-        "DATABASE_URL no está definida. Configúrala en backend/.env"
-    )
+SQLALCHEMY_DATABASE_URL = os.getenv(
+    "DATABASE_URL",
+    "mysql+pymysql://root@localhost/tintwrap",
+)
 
 connect_args = (
     {"check_same_thread": False}
@@ -121,6 +117,35 @@ def ensure_users_password_column() -> None:
 
     with engine.begin() as conn:
         conn.execute(text(ddl))
+
+
+def ensure_blogs_date_columns() -> None:
+    """Añade blogs.added_date y blogs.updated_date en bases ya creadas."""
+    from sqlalchemy import inspect, text
+
+    insp = inspect(engine)
+    if "blogs" not in insp.get_table_names():
+        return
+
+    columns = {col["name"] for col in insp.get_columns("blogs")}
+    dialect = engine.dialect.name
+
+    with engine.begin() as conn:
+        if "added_date" not in columns:
+            if dialect == "mysql":
+                conn.execute(
+                    text("ALTER TABLE blogs ADD COLUMN added_date DATETIME NULL")
+                )
+            else:
+                conn.execute(text("ALTER TABLE blogs ADD COLUMN added_date DATETIME"))
+
+        if "updated_date" not in columns:
+            if dialect == "mysql":
+                conn.execute(
+                    text("ALTER TABLE blogs ADD COLUMN updated_date DATETIME NULL")
+                )
+            else:
+                conn.execute(text("ALTER TABLE blogs ADD COLUMN updated_date DATETIME"))
 
 
 def ensure_sliders_active_column() -> None:

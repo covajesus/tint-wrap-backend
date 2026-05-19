@@ -11,11 +11,10 @@ from pathlib import Path
 from urllib.request import Request, urlopen
 
 from utils.media_storage import UPLOADS_ROOT, ensure_uploads_root
+from utils.youtube_profile import YouTubeProfile, get_configured_youtube_profile
 
 logger = logging.getLogger(__name__)
 
-YOUTUBE_SHORTS_URL = "https://www.youtube.com/@polarizadoyvinil/shorts"
-YOUTUBE_CHANNEL_HANDLE = "polarizadoyvinil"
 DEFAULT_LIMIT = 6
 CACHE_TTL = timedelta(hours=1)
 AUTO_SYNC_INTERVAL_HOURS = 6
@@ -42,6 +41,20 @@ class YouTubeShort:
 
 _cache_at: datetime | None = None
 _cache_videos: list[YouTubeShort] = []
+_cache_profile: YouTubeProfile | None = None
+
+_CONFIG_MSG = (
+    "Configura la URL de YouTube en Administración → Configuración "
+    "(ej. https://www.youtube.com/@tu_canal/shorts)."
+)
+
+
+def invalidate_youtube_cache() -> None:
+    """Llamar cuando cambia youtube_url en configuración."""
+    global _cache_at, _cache_videos, _cache_profile
+    _cache_at = None
+    _cache_videos = []
+    _cache_profile = None
 
 
 def _ytdlp_executable() -> str:
@@ -210,18 +223,38 @@ def _entry_to_short(entry: dict) -> YouTubeShort | None:
 
 
 def fetch_latest_shorts(limit: int = DEFAULT_LIMIT, *, force: bool = False) -> list[YouTubeShort]:
-    global _cache_at, _cache_videos
+    global _cache_at, _cache_videos, _cache_profile
+
+    profile = get_configured_youtube_profile()
+    if profile is None or not profile.shorts_feed_url:
+        raise RuntimeError(_CONFIG_MSG)
 
     now = datetime.now(timezone.utc)
     if (
         not force
         and _cache_at is not None
         and _cache_videos
+        and _cache_profile is not None
+        and _cache_profile.shorts_feed_url == profile.shorts_feed_url
         and now - _cache_at < CACHE_TTL
     ):
         return _cache_videos[:limit]
 
-    entries = _run_ytdlp_json(YOUTUBE_SHORTS_URL, limit)
+    try:
+        entries = _run_ytdlp_json(profile.shorts_feed_url, limit)
+    except RuntimeError as exc:
+        if (
+            _cache_videos
+            and _cache_profile
+            and _cache_profile.shorts_feed_url == profile.shorts_feed_url
+        ):
+            logger.warning("YouTube: usando caché tras fallo de yt-dlp: %s", exc)
+            return _cache_videos[:limit]
+        raise RuntimeError(
+            "No se pudieron cargar los Shorts de YouTube. "
+            "Comprueba la URL del canal en Configuración y actualiza yt-dlp en el servidor."
+        ) from exc
+
     videos: list[YouTubeShort] = []
     for entry in entries:
         short = _entry_to_short(entry)
@@ -229,13 +262,25 @@ def fetch_latest_shorts(limit: int = DEFAULT_LIMIT, *, force: bool = False) -> l
             videos.append(short)
 
     if not videos:
+        if (
+            _cache_videos
+            and _cache_profile
+            and _cache_profile.shorts_feed_url == profile.shorts_feed_url
+        ):
+            return _cache_videos[:limit]
         raise RuntimeError("No se encontraron Shorts en el canal de YouTube.")
 
     _prune_stale_media({video.id for video in videos})
 
     _cache_at = now
     _cache_videos = videos
+    _cache_profile = profile
     return videos[:limit]
+
+
+def get_youtube_profile_url() -> str:
+    profile = get_configured_youtube_profile()
+    return profile.profile_url if profile is not None else ""
 
 
 def _prune_stale_media(active_ids: set[str]) -> None:

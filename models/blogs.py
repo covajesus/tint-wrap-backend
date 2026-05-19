@@ -1,4 +1,6 @@
-from sqlalchemy import Column, Integer, String, Text
+from datetime import datetime
+
+from sqlalchemy import Column, DateTime, Integer, String, Text
 
 from database import Base
 
@@ -12,3 +14,10 @@ class Blog(Base):
     extract = Column(Text, nullable=True)
     content = Column(Text, nullable=True)
     image = Column(Text, nullable=True)
+    added_date = Column(DateTime, nullable=True, default=datetime.utcnow)
+    updated_date = Column(
+        DateTime,
+        nullable=True,
+        default=datetime.utcnow,
+        onupdate=datetime.utcnow,
+    )

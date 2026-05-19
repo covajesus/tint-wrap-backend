@@ -9,6 +9,7 @@ from utils.tiktok_feed import (
     TIKTOK_PUBLIC_PREFIX,
     fetch_latest_videos,
     get_sync_metadata,
+    get_tiktok_profile_url,
     resolve_stream_url,
 )
 
@@ -26,7 +27,7 @@ def list_videos(
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 
     return {
-        "profile_url": "https://www.tiktok.com/@tintwrap",
+        "profile_url": get_tiktok_profile_url(),
         **get_sync_metadata(),
         "videos": [
             {

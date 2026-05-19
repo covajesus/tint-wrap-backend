@@ -5,6 +5,7 @@ from utils.youtube_feed import (
     YOUTUBE_PUBLIC_PREFIX,
     fetch_latest_shorts,
     get_sync_metadata,
+    get_youtube_profile_url,
 )
 
 router = APIRouter(prefix="/api/youtube", tags=["YouTube"])
@@ -21,7 +22,7 @@ def list_shorts(
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 
     return {
-        "profile_url": "https://www.youtube.com/@polarizadoyvinil/shorts",
+        "profile_url": get_youtube_profile_url(),
         **get_sync_metadata(),
         "videos": [
             {
