@@ -23,6 +23,7 @@ from routers import (
     tiktok,
     youtube,
 )
+from utils.cors_middleware import ExplicitCorsMiddleware
 from utils.cors_origins import get_cors_origin_regex, get_cors_origins
 from utils.media_storage import UPLOADS_ROOT, ensure_uploads_root
 from utils.seed_admin import seed_default_admin
@@ -43,6 +44,8 @@ app.add_middleware(
     allow_headers=["*"],
     expose_headers=["*"],
 )
+# Responde OPTIONS (preflight) aunque falle algo más abajo en la pila.
+app.add_middleware(ExplicitCorsMiddleware)
 
 Base.metadata.create_all(bind=engine)
 ensure_service_gallery_title_column()
