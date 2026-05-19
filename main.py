@@ -1,4 +1,7 @@
-from fastapi import Depends, FastAPI
+import asyncio
+from contextlib import asynccontextmanager
+
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
@@ -21,10 +24,29 @@ from routers import (
     service_galleries,
     services,
     sliders,
+    tiktok,
+    youtube,
 )
 from utils.cors_origins import get_cors_origins
 from utils.media_storage import UPLOADS_ROOT, ensure_uploads_root
 from utils.seed_admin import seed_default_admin
+from utils.tiktok_sync_scheduler import run_tiktok_sync_scheduler
+from utils.youtube_sync_scheduler import run_youtube_sync_scheduler
+
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    tiktok_task = asyncio.create_task(run_tiktok_sync_scheduler())
+    youtube_task = asyncio.create_task(run_youtube_sync_scheduler())
+    try:
+        yield
+    finally:
+        for task in (tiktok_task, youtube_task):
+            task.cancel()
+            try:
+                await task
+            except asyncio.CancelledError:
+                pass
 
 
 app = FastAPI(
@@ -32,6 +54,7 @@ app = FastAPI(
     docs_url="/api/docs",
     redoc_url="/api/redoc",
     openapi_url="/api/openapi.json",
+    lifespan=lifespan,
 )
 
 app.add_middleware(
@@ -64,6 +87,8 @@ app.include_router(configurations.router)
 app.include_router(service_galleries.router)
 app.include_router(services.router)
 app.include_router(sliders.router)
+app.include_router(tiktok.router)
+app.include_router(youtube.router)
 
 app.mount(
     "/api/uploads",
