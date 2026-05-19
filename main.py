@@ -63,7 +63,7 @@ protected = [Depends(get_current_user)]
 
 app.include_router(auth.router)
 app.include_router(blogs.router, dependencies=protected)
-app.include_router(configurations.router, dependencies=protected)
+app.include_router(configurations.router)
 app.include_router(service_galleries.router, dependencies=protected)
 app.include_router(services.router, dependencies=protected)
 app.include_router(sliders.router, dependencies=protected)
