@@ -2,6 +2,7 @@ from sqlalchemy.orm import Session
 
 from models.blogs import Blog
 from schemas.blogs import CreateBlog, UpdateBlog
+from utils.media_storage import delete_blog_upload_folder, persist_blog_media
 
 
 class BlogClass:
@@ -22,13 +23,22 @@ class BlogClass:
 
     def store(self, blog: CreateBlog) -> Blog:
         data = blog.model_dump(exclude_none=True)
-        db_blog = Blog(**data)
+        image = data.pop("image", None)
 
-        self.db.add(db_blog)
-        self.db.commit()
-        self.db.refresh(db_blog)
+        try:
+            db_blog = Blog(**data)
+            self.db.add(db_blog)
+            self.db.flush()
 
-        return db_blog
+            if image is not None and str(image).strip():
+                db_blog.image = persist_blog_media(image, blog_id=db_blog.id)
+
+            self.db.commit()
+            self.db.refresh(db_blog)
+            return db_blog
+        except Exception:
+            self.db.rollback()
+            raise
 
     def update(self, blog_id: int, blog: UpdateBlog) -> Blog | None:
         db_blog = self.get_by_id(blog_id)
@@ -37,14 +47,25 @@ class BlogClass:
             return None
 
         data = blog.model_dump(exclude_unset=True)
+        image = data.pop("image", None)
 
         for field, value in data.items():
             setattr(db_blog, field, value)
 
-        self.db.commit()
-        self.db.refresh(db_blog)
+        if image is not None:
+            db_blog.image = persist_blog_media(
+                image,
+                blog_id=blog_id,
+                previous=db_blog.image,
+            )
 
-        return db_blog
+        try:
+            self.db.commit()
+            self.db.refresh(db_blog)
+            return db_blog
+        except Exception:
+            self.db.rollback()
+            raise
 
     def delete(self, blog_id: int) -> bool:
         db_blog = self.get_by_id(blog_id)
@@ -52,7 +73,11 @@ class BlogClass:
         if db_blog is None:
             return False
 
-        self.db.delete(db_blog)
-        self.db.commit()
-
-        return True
+        try:
+            self.db.delete(db_blog)
+            self.db.commit()
+            delete_blog_upload_folder(blog_id)
+            return True
+        except Exception:
+            self.db.rollback()
+            raise
