@@ -1,31 +1,14 @@
 import os
 from collections.abc import Generator
-from pathlib import Path
 
-from dotenv import load_dotenv
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, declarative_base, sessionmaker
 
-# Siempre backend/.env (misma carpeta que este archivo)
-_ENV_FILE = Path(__file__).resolve().parent / ".env"
-if not _ENV_FILE.is_file():
-    raise RuntimeError(f"No se encontró el archivo {_ENV_FILE}")
 
-load_dotenv(_ENV_FILE)
-
-
-def _env(key: str) -> str | None:
-    value = os.getenv(key)
-    if value is None:
-        return None
-    return value.strip().strip('"').strip("'")
-
-
-SQLALCHEMY_DATABASE_URL = _env("DATABASE_URL")
-if not SQLALCHEMY_DATABASE_URL:
-    raise RuntimeError(
-        f"DATABASE_URL no está definida en {_ENV_FILE}"
-    )
+SQLALCHEMY_DATABASE_URL = os.getenv(
+    "DATABASE_URL",
+    "mysql+pymysql://root@localhost/tintwrap",
+)
 
 connect_args = (
     {"check_same_thread": False}
@@ -164,9 +147,49 @@ def ensure_blogs_date_columns() -> None:
             else:
                 conn.execute(text("ALTER TABLE blogs ADD COLUMN updated_date DATETIME"))
 
+        if dialect == "mysql":
+            conn.execute(
+                text(
+                    "UPDATE blogs SET added_date = COALESCE(added_date, updated_date, UTC_TIMESTAMP()) "
+                    "WHERE added_date IS NULL"
+                )
+            )
+            conn.execute(
+                text(
+                    "UPDATE blogs SET updated_date = COALESCE(updated_date, added_date, UTC_TIMESTAMP()) "
+                    "WHERE updated_date IS NULL"
+                )
+            )
+        elif dialect == "sqlite":
+            conn.execute(
+                text(
+                    "UPDATE blogs SET added_date = COALESCE(added_date, updated_date, datetime('now')) "
+                    "WHERE added_date IS NULL"
+                )
+            )
+            conn.execute(
+                text(
+                    "UPDATE blogs SET updated_date = COALESCE(updated_date, added_date, datetime('now')) "
+                    "WHERE updated_date IS NULL"
+                )
+            )
+        else:
+            conn.execute(
+                text(
+                    "UPDATE blogs SET added_date = COALESCE(added_date, updated_date, CURRENT_TIMESTAMP) "
+                    "WHERE added_date IS NULL"
+                )
+            )
+            conn.execute(
+                text(
+                    "UPDATE blogs SET updated_date = COALESCE(updated_date, added_date, CURRENT_TIMESTAMP) "
+                    "WHERE updated_date IS NULL"
+                )
+            )
 
-def ensure_sliders_active_column() -> None:
-    """Añade sliders.active en bases ya creadas."""
+
+def ensure_sliders_schema() -> None:
+    """Migra sliders a columnas slider (foto) y url (enlace al hacer clic)."""
     from sqlalchemy import inspect, text
 
     insp = inspect(engine)
@@ -174,19 +197,50 @@ def ensure_sliders_active_column() -> None:
         return
 
     columns = {col["name"] for col in insp.get_columns("sliders")}
-    if "active" in columns:
-        return
-
     dialect = engine.dialect.name
-    if dialect == "mysql":
-        ddl = "ALTER TABLE sliders ADD COLUMN active TINYINT(1) NOT NULL DEFAULT 1"
-    elif dialect == "sqlite":
-        ddl = "ALTER TABLE sliders ADD COLUMN active BOOLEAN NOT NULL DEFAULT 1"
-    else:
-        ddl = "ALTER TABLE sliders ADD COLUMN active BOOLEAN NOT NULL DEFAULT TRUE"
+    had_legacy_media = "slider_image_video" in columns
+    had_legacy_url = "main_button_url" in columns
+    had_legacy_url2 = "second_button_url" in columns
 
     with engine.begin() as conn:
-        conn.execute(text(ddl))
+        if "slider" not in columns:
+            if dialect == "mysql":
+                conn.execute(text("ALTER TABLE sliders ADD COLUMN slider TEXT NULL"))
+            else:
+                conn.execute(text("ALTER TABLE sliders ADD COLUMN slider TEXT"))
+
+        if "url" not in columns:
+            if dialect == "mysql":
+                conn.execute(
+                    text("ALTER TABLE sliders ADD COLUMN url VARCHAR(500) NULL")
+                )
+            else:
+                conn.execute(text("ALTER TABLE sliders ADD COLUMN url VARCHAR(500)"))
+
+        if had_legacy_media:
+            conn.execute(
+                text(
+                    "UPDATE sliders SET slider = slider_image_video "
+                    "WHERE slider IS NULL AND slider_image_video IS NOT NULL"
+                )
+            )
+
+        if had_legacy_url:
+            conn.execute(
+                text(
+                    "UPDATE sliders SET url = main_button_url "
+                    "WHERE url IS NULL AND main_button_url IS NOT NULL "
+                    "AND TRIM(main_button_url) <> ''"
+                )
+            )
+        if had_legacy_url2:
+            conn.execute(
+                text(
+                    "UPDATE sliders SET url = second_button_url "
+                    "WHERE url IS NULL AND second_button_url IS NOT NULL "
+                    "AND TRIM(second_button_url) <> ''"
+                )
+            )
 
 
 def get_db() -> Generator[Session, None, None]:

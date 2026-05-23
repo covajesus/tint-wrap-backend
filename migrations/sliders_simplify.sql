@@ -1,0 +1,16 @@
+-- Esquema final de `sliders` (MySQL):
+-- id, active_status_id, slider, url, `order`, added_date, updated_date, deleted_date
+--
+-- Si migras desde columnas antiguas (main_title, slider_image_video, etc.):
+
+-- ALTER TABLE sliders
+--   ADD COLUMN slider TEXT NULL,
+--   ADD COLUMN url VARCHAR(500) NULL,
+--   ADD COLUMN active_status_id INT NOT NULL DEFAULT 1;
+--
+-- UPDATE sliders SET
+--   slider = slider_image_video,
+--   url = COALESCE(NULLIF(TRIM(main_button_url), ''), NULLIF(TRIM(second_button_url), ''))
+-- WHERE deleted_date IS NULL;
+--
+-- ALTER TABLE sliders DROP COLUMN main_title, DROP COLUMN subtitle, ...;

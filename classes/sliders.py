@@ -29,7 +29,7 @@ class SliderClass:
     def store(self, slider: CreateSlider) -> Slider:
         now = datetime.utcnow()
         data = slider.model_dump(exclude_none=True)
-        media = data.pop("slider_image_video", None)
+        media = data.pop("slider", None)
 
         if "added_date" not in data:
             data["added_date"] = now
@@ -42,7 +42,7 @@ class SliderClass:
             self.db.flush()
 
             if media is not None and str(media).strip():
-                db_slider.slider_image_video = persist_slider_media(
+                db_slider.slider = persist_slider_media(
                     media,
                     slider_id=db_slider.id,
                 )
@@ -61,16 +61,16 @@ class SliderClass:
             return None
 
         data = slider.model_dump(exclude_unset=True)
-        media = data.pop("slider_image_video", None)
+        media = data.pop("slider", None)
 
         for field, value in data.items():
             setattr(db_slider, field, value)
 
         if media is not None:
-            db_slider.slider_image_video = persist_slider_media(
+            db_slider.slider = persist_slider_media(
                 media,
                 slider_id=slider_id,
-                previous=db_slider.slider_image_video,
+                previous=db_slider.slider,
             )
 
         db_slider.updated_date = datetime.utcnow()

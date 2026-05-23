@@ -67,7 +67,10 @@ class BlogClass:
                 previous=db_blog.image,
             )
 
-        db_blog.updated_date = datetime.utcnow()
+        now = datetime.utcnow()
+        if db_blog.added_date is None:
+            db_blog.added_date = now
+        db_blog.updated_date = now
 
         try:
             self.db.commit()
