@@ -26,6 +26,20 @@ class SliderClass:
     def get_by_id(self, slider_id: int) -> Slider | None:
         return self._active_query().filter(Slider.id == slider_id).first()
 
+    def _reindex_orders(self) -> None:
+        """Renumera order a 1..n entre sliders activos (sin huecos)."""
+        sliders = (
+            self._active_query()
+            .order_by(Slider.order.asc(), Slider.id.asc())
+            .all()
+        )
+        now = datetime.utcnow()
+        for index, slider in enumerate(sliders):
+            new_order = index + 1
+            if slider.order != new_order:
+                slider.order = new_order
+                slider.updated_date = now
+
     def store(self, slider: CreateSlider) -> Slider:
         now = datetime.utcnow()
         data = slider.model_dump(exclude_none=True)
@@ -89,8 +103,13 @@ class SliderClass:
         if db_slider is None:
             return False
 
-        db_slider.deleted_date = datetime.utcnow()
-        self.db.commit()
-        delete_slider_upload_folder(slider_id)
-
-        return True
+        try:
+            db_slider.deleted_date = datetime.utcnow()
+            self.db.flush()
+            self._reindex_orders()
+            self.db.commit()
+            delete_slider_upload_folder(slider_id)
+            return True
+        except Exception:
+            self.db.rollback()
+            raise
