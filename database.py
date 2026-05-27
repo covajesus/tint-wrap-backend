@@ -257,6 +257,30 @@ def ensure_sliders_schema() -> None:
             )
 
 
+def ensure_configurations_visitior_column() -> None:
+    """Añade configurations.visitior en bases ya creadas."""
+    from sqlalchemy import inspect, text
+
+    insp = inspect(engine)
+    if "configurations" not in insp.get_table_names():
+        return
+
+    columns = {col["name"] for col in insp.get_columns("configurations")}
+    if "visitior" in columns:
+        return
+
+    dialect = engine.dialect.name
+    if dialect == "mysql":
+        ddl = "ALTER TABLE configurations ADD COLUMN visitior INT NOT NULL DEFAULT 0"
+    elif dialect == "sqlite":
+        ddl = "ALTER TABLE configurations ADD COLUMN visitior INTEGER NOT NULL DEFAULT 0"
+    else:
+        ddl = "ALTER TABLE configurations ADD COLUMN visitior INTEGER NOT NULL DEFAULT 0"
+
+    with engine.begin() as conn:
+        conn.execute(text(ddl))
+
+
 def get_db() -> Generator[Session, None, None]:
     db = SessionLocal()
     try:

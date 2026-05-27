@@ -20,5 +20,6 @@ class Configuration(Base):
     contact_email = Column(String(255), nullable=True)
     address = Column(Text, nullable=True)
     whatsapp_url = Column(String(512), nullable=True)
+    visitior = Column(Integer, nullable=False, default=0)
     added_date = Column(DateTime, nullable=True)
     updated_date = Column(DateTime, nullable=True)

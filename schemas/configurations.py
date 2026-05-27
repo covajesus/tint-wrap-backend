@@ -30,7 +30,12 @@ class ConfigurationSchema(BaseModel):
     contact_email: str | None = None
     address: str | None = None
     whatsapp_url: str | None = None
+    visitior: int = 0
     added_date: datetime | None = None
     updated_date: datetime | None = None
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class VisitorCountSchema(BaseModel):
+    visitior: int

@@ -12,11 +12,12 @@ from database import (
     ensure_blogs_date_columns,
     ensure_service_gallery_title_column,
     ensure_services_subtitle_column,
+    ensure_configurations_visitior_column,
     ensure_sliders_schema,
     ensure_users_password_column,
     ensure_users_table,
 )
-from models import sliders, users  # noqa: F401 — registra modelos en metadata
+from models import configurations, sliders, users  # noqa: F401 — registra modelos
 from routers import (
     auth,
     blogs,
@@ -25,6 +26,7 @@ from routers import (
     services,
     sliders,
     tiktok,
+    visitors,
     youtube,
 )
 from utils.cors_origins import get_cors_origins
@@ -71,6 +73,7 @@ ensure_service_gallery_title_column()
 ensure_services_subtitle_column()
 ensure_blogs_date_columns()
 ensure_sliders_schema()
+ensure_configurations_visitior_column()
 ensure_users_table()
 ensure_users_password_column()
 ensure_uploads_root()
@@ -88,6 +91,7 @@ app.include_router(service_galleries.router)
 app.include_router(services.router)
 app.include_router(sliders.router)
 app.include_router(tiktok.router)
+app.include_router(visitors.router)
 app.include_router(youtube.router)
 
 app.mount(
